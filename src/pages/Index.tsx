@@ -1,23 +1,17 @@
-
 import React from 'react';
 import ParticleButton from '../components/ParticleButton';
 import AnimatedBackground from '../components/AnimatedBackground';
-
 const Index = () => {
   const handleForestVedaClick = () => {
     console.log('ForestVeda clicked!');
   };
-
   const handleSeaVedaClick = () => {
     console.log('SeaVeda clicked!');
   };
-
   const handleMainAction = () => {
     console.log('Main action button clicked!');
   };
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 relative">
+  return <div className="min-h-screen flex flex-col items-center justify-center p-8 relative bg-gray-950">
       <AnimatedBackground />
       
       {/* Main content container */}
@@ -26,25 +20,17 @@ const Index = () => {
         {/* Particle Buttons Section */}
         <div className="flex flex-col md:flex-row items-center justify-center gap-16 mb-8">
           <div className="text-center">
-            <ParticleButton
-              particleColor="#22c55e"
-              className="bg-gradient-to-br from-green-600 to-green-800 hover:from-green-500 hover:to-green-700"
-              onClick={handleForestVedaClick}
-            >
+            <ParticleButton particleColor="#22c55e" className="bg-gradient-to-br from-green-600 to-green-800 hover:from-green-500 hover:to-green-700" onClick={handleForestVedaClick}>
               ForestVeda
             </ParticleButton>
-            <p className="text-green-300 mt-4 text-sm font-medium">Nature's Wisdom</p>
+            
           </div>
           
           <div className="text-center">
-            <ParticleButton
-              particleColor="#38bdf8"
-              className="bg-gradient-to-br from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700"
-              onClick={handleSeaVedaClick}
-            >
+            <ParticleButton particleColor="#38bdf8" className="bg-gradient-to-br from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700" onClick={handleSeaVedaClick}>
               SeaVeda
             </ParticleButton>
-            <p className="text-blue-300 mt-4 text-sm font-medium">Ocean's Mystery</p>
+            
           </div>
         </div>
 
@@ -60,10 +46,7 @@ const Index = () => {
 
         {/* Action Button Section */}
         <div className="mt-12">
-          <button
-            onClick={handleMainAction}
-            className="px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-purple-500/25 border border-white/20"
-          >
+          <button onClick={handleMainAction} className="px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-purple-500/25 border border-white/20">
             Begin Your Journey
           </button>
         </div>
@@ -72,8 +55,6 @@ const Index = () => {
         <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-green-500/20 to-transparent rounded-full blur-xl" />
         <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-blue-500/20 to-transparent rounded-full blur-xl" />
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
