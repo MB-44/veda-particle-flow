@@ -11,7 +11,7 @@ const Index = () => {
   const handleMainAction = () => {
     console.log('Main action button clicked!');
   };
-  return <div className="min-h-screen flex flex-col items-center justify-center p-8 relative">
+  return <div className="min-h-screen flex flex-col items-center justify-center p-8 relative bg-gray-950">
       <AnimatedBackground />
       
       {/* Main content container */}
