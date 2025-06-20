@@ -18,9 +18,12 @@ body {
 }
 
 canvas {
+  position: fixed;
+  top: 0; left: 0;
   width: 100vw;
   height: 100vh;
-  object-fit: cover;
+  z-index: 1;
+  /* object-fit: cover; */
 }
 
 .details {
@@ -337,10 +340,10 @@ button:hover ~ .custom-cursor {
   transform: translate(-50%, -50%);
   width: 320px;
   height: 80px;
-  border-radius: 40px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  border-radius: 30px;
+  background: transparent;
+  /* backdrop-filter: blur(8px); */
+  /* -webkit-backdrop-filter: blur(8px); */
   border: 2px solid rgba(255, 255, 255, 0.3);
   color: #fff;
   cursor: pointer;

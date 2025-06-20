@@ -18,8 +18,21 @@ const Scene1: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', onResize);
+    const handleResize = () => {
+      const newIsMobile = window.innerWidth <= 768;
+      setIsMobile(newIsMobile);
+  
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      textCanvas.width = window.innerWidth;
+      textCanvas.height = window.innerHeight;
+      cursorCanvas.width = window.innerWidth;
+      cursorCanvas.height = window.innerHeight;
+  
+      render();
+    };
+
+    window.addEventListener('resize', handleResize);
 
     const canvas = canvasRef.current!;
     const textCanvas = textCanvasRef.current!;
@@ -146,7 +159,10 @@ const Scene1: React.FC = () => {
       onUpdate: render
     });
 
-    meditationBtnRef.current!.addEventListener('click', () => navigate('/forestVeda/Scene2'));
+    meditationBtnRef.current!.addEventListener('click', () => {
+      ScrollTrigger.getAll().forEach(t => t.kill());
+      navigate('/forestVeda/Scene2');
+    });
 
     const animate = () => {
       cursorContext.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
@@ -155,16 +171,36 @@ const Scene1: React.FC = () => {
     };
     animate();
 
+    // Updated render function for full page coverage
     function render() {
       context.clearRect(0, 0, canvas.width, canvas.height);
       const frameImg = images[controller.frame];
-      if (
-        frameImg &&
-        frameImg.complete &&
-        frameImg.naturalWidth > 0 &&
-        frameImg.naturalHeight > 0
-      )
-        context.drawImage(frameImg, 0, 0);
+      
+      if (frameImg && frameImg.complete && frameImg.naturalWidth > 0 && frameImg.naturalHeight > 0) {
+        // Calculate scaling to cover the entire canvas (like CSS background-size: cover)
+        const canvasAspect = canvas.width / canvas.height;
+        const imageAspect = frameImg.naturalWidth / frameImg.naturalHeight;
+        
+        let drawWidth, drawHeight, offsetX, offsetY;
+        
+        // Cover scaling: choose the larger scale factor to ensure full coverage
+        if (canvasAspect > imageAspect) {
+          // Canvas is wider than image - scale to canvas width
+          drawWidth = canvas.width;
+          drawHeight = drawWidth / imageAspect;
+          offsetX = 0;
+          offsetY = (canvas.height - drawHeight) / 2;
+        } else {
+          // Canvas is taller than image - scale to canvas height
+          drawHeight = canvas.height;
+          drawWidth = drawHeight * imageAspect;
+          offsetX = (canvas.width - drawWidth) / 2;
+          offsetY = 0;
+        }
+        
+        // Draw the image to completely cover the canvas
+        context.drawImage(frameImg, offsetX, offsetY, drawWidth, drawHeight);
+      }
 
       const btn = meditationBtnRef.current!;
       if (controller.frame >= 160) {
@@ -179,7 +215,7 @@ const Scene1: React.FC = () => {
     }
 
     return () => {
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', handleResize);
       document.removeEventListener('mousemove', mouseMove);
       document.removeEventListener('touchstart', touchStart);
       document.removeEventListener('touchmove', touchMove);

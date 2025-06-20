@@ -290,7 +290,10 @@ const Scene2: React.FC = () => {
     <>
       <div ref={loaderRef} className={styles.loader}>
         <video ref={forestLoopRef} className={styles['forest-loop-video']} autoPlay muted loop playsInline>
-          <source src={`${import.meta.env.BASE_URL}ForestLoop.webm`} type="video/webm" />
+          <source 
+            src={`${import.meta.env.BASE_URL}ForestLoop.webm`} 
+            type="video/webm"
+          />
         </video>
         <h2>Forest Experience</h2>
         <div ref={loadingBarRef} className={styles['loading-bar']} />
