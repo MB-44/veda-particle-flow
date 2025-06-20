@@ -1,13 +1,18 @@
 
 import React from 'react';
+
+import { useNavigate, useLocation } from 'react-router-dom';
+// import { useRouter} from "next/router"
 import ParticleButton from '../components/ParticleButton';
 import AnimatedBackground from '../components/AnimatedBackground';
 import CursorParticles from '../components/CursorParticles';
 import VideoBackground from '../components/VideoBackground';
 
 const Index = () => {
+  const navigate = useNavigate();
+
   const handleForestVedaClick = () => {
-    console.log('ForestVeda clicked!');
+    navigate('./forestVeda/Scene1')
   };
 
   const handleSeaVedaClick = () => {
