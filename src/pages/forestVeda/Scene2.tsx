@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './Scene2.module.css';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const Scene2: React.FC = () => {
+  const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textCanvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,34 +20,92 @@ const Scene2: React.FC = () => {
   const secondContainerRef = useRef<HTMLDivElement>(null);
   const breathingRef = useRef<HTMLDivElement>(null);
   const instructionRef = useRef<HTMLDivElement>(null);
-
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', onResize);
 
-    // (…same canvas + particles setup as Scene1…)
+    const canvas = canvasRef.current!;
+    const textCanvas = textCanvasRef.current!;
+    const cursorCanvas = cursorCanvasRef.current!;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    textCanvas.width = window.innerWidth;
+    textCanvas.height = window.innerHeight;
+    cursorCanvas.width = window.innerWidth;
+    cursorCanvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d')!;
+    const cursorCtx = cursorCanvas.getContext('2d')!;
 
-    // Video logic
+    class Particle {
+      x: number;
+      y: number;
+      size: number;
+      speedX: number;
+      speedY: number;
+      life: number;
+      constructor(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+        this.size = Math.random() * 1.5 + 0.5;
+        this.speedX = Math.random() * 1.5 - 0.75;
+        this.speedY = Math.random() * 1.5 - 0.75;
+        this.life = 1;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.life -= 0.015;
+      }
+      draw() {
+        cursorCtx.fillStyle = `rgba(144,238,144,${this.life})`;
+        cursorCtx.beginPath();
+        cursorCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        cursorCtx.fill();
+      }
+    }
+    const particles: Particle[] = [];
+    const createParticles = (x: number, y: number) => {
+      for (let i = 0; i < 3; i++) {
+        if (particles.length < 80) particles.push(new Particle(x, y));
+      }
+    };
+    const updateParticles = () => {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+      }
+    };
+    const mouseMove = (e: MouseEvent) => createParticles(e.clientX, e.clientY);
+    const touchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      createParticles(t.clientX, t.clientY);
+    };
+    const touchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      createParticles(t.clientX, t.clientY);
+    };
+    document.addEventListener('mousemove', mouseMove);
+    document.addEventListener('touchstart', touchStart, { passive: false });
+    document.addEventListener('touchmove', touchMove, { passive: false });
+
     const forestLoop = forestLoopRef.current!;
-    let videoStarted = false;
-    let videoStartTime = 0;
-    const minimumVideoTime = 3000;
+    let videoReady = false;
+    let videoStart = 0;
     forestLoop.addEventListener('loadeddata', () => {
-      videoStarted = true;
-      videoStartTime = Date.now();
+      videoReady = true;
+      videoStart = Date.now();
     });
 
-    // Load frames
     const frameCount = 200;
     const images: HTMLImageElement[] = [];
     let loadedImages = 0;
     const currentFrame = (i: number) =>
-      isMobile
-        ? `./Scene2_MO/${(i + 1).toString()}.webp`
-        : `./Scene2_PC/${(i + 1).toString()}.webp`;
-    const updateLoadingProgress = (pct: number) => {
+      `${import.meta.env.BASE_URL}${isMobile ? 'Scene2_MO' : 'Scene2_PC'}/${i + 1}.webp`;
+    const updateLoading = (pct: number) => {
       if (progressRef.current) progressRef.current.textContent = `${pct}%`;
       if (loadingBarRef.current) loadingBarRef.current.style.setProperty('--progress', `${pct}%`);
     };
@@ -49,23 +113,21 @@ const Scene2: React.FC = () => {
       const img = new Image();
       img.src = currentFrame(i);
       img.onload = img.onerror = () => {
-        loadedImages++;
-        const pct = Math.floor((loadedImages / frameCount) * 100);
-        updateLoadingProgress(pct);
-        if (loadedImages === frameCount && videoStarted) {
-          const elapsed = Date.now() - videoStartTime;
-          const wait = Math.max(0, minimumVideoTime - elapsed);
+        loadedImages += 1;
+        updateLoading(Math.floor((loadedImages / frameCount) * 100));
+        if (loadedImages === frameCount && videoReady) {
+          const wait = Math.max(0, 3000 - (Date.now() - videoStart));
           setTimeout(() => {
             gsap.to(loaderRef.current, {
               opacity: 0,
               duration: 0.8,
-              ease: "power2.inOut",
+              ease: 'power2.inOut',
               onComplete: () => {
-                loaderRef.current!.style.display = "none";
+                loaderRef.current!.style.display = 'none';
                 gsap.fromTo(
-                  [canvasRef.current, textCanvasRef.current, cursorCanvasRef.current],
+                  [canvas, textCanvas, cursorCanvas],
                   { opacity: 0 },
-                  { opacity: 1, duration: 0.8, ease: "power2.out" }
+                  { opacity: 1, duration: 0.8, ease: 'power2.out' }
                 );
                 render();
               }
@@ -76,53 +138,41 @@ const Scene2: React.FC = () => {
       images.push(img);
     }
 
-    // GSAP scrollTrigger (same as Scene1)
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const ballRef = useRef<{ frame: number }>({ frame: 0 });
-    gsap.to(ballRef.current, {
+    const controller = { frame: 0 };
+    gsap.to(controller, {
       frame: frameCount - 1,
-      snap: "frame",
-      ease: "none",
+      snap: 'frame',
+      ease: 'none',
       scrollTrigger: {
         scrub: 0,
-        pin: canvasRef.current,
+        pin: canvas,
         end: () => `+=${window.innerHeight * 2}`
       },
       onUpdate: render
     });
 
-    // Hold‐to‐begin logic
-    let isHolding = false;
     let pressTimer: ReturnType<typeof setInterval>;
     const CIRCUMFERENCE = 534.07;
     const HOLD_DURATION = 2000;
-    const progressRing = document.querySelector('.progress-ring-circle')!;
-    const startHold = (e: MouseEvent | TouchEvent) => {
-      e.preventDefault();
-      isHolding = true;
-      const startTime = Date.now();
-      gsap.set(progressRing, { strokeDashoffset: CIRCUMFERENCE });
+    const ring = document.querySelector('.progress-ring-circle') as SVGCircleElement;
+
+    const startHold = () => {
+      const start = Date.now();
+      gsap.set(ring, { strokeDashoffset: CIRCUMFERENCE });
       pressTimer = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / HOLD_DURATION, 1);
-        gsap.to(progressRing, {
-          strokeDashoffset: CIRCUMFERENCE * (1 - progress),
-          duration: 0.1
-        });
+        const progress = Math.min((Date.now() - start) / HOLD_DURATION, 1);
+        gsap.to(ring, { strokeDashoffset: CIRCUMFERENCE * (1 - progress), duration: 0.1 });
         if (progress >= 1) {
           clearInterval(pressTimer);
-          startBreathingExercise();
+          beginBreathing();
         }
       }, 16);
     };
-    const endHold = (e: MouseEvent | TouchEvent) => {
-      e.preventDefault();
-      if (isHolding) {
-        clearInterval(pressTimer);
-        isHolding = false;
-        gsap.to(progressRing, { strokeDashoffset: CIRCUMFERENCE, duration: 0.3 });
-      }
+    const endHold = () => {
+      clearInterval(pressTimer);
+      gsap.to(ring, { strokeDashoffset: CIRCUMFERENCE, duration: 0.3 });
     };
+
     circularBtnRef.current!.addEventListener('mousedown', startHold);
     circularBtnRef.current!.addEventListener('mouseup', endHold);
     circularBtnRef.current!.addEventListener('mouseleave', endHold);
@@ -130,40 +180,28 @@ const Scene2: React.FC = () => {
     circularBtnRef.current!.addEventListener('touchend', endHold, { passive: false });
     circularBtnRef.current!.addEventListener('touchcancel', endHold, { passive: false });
 
-    function startBreathingExercise() {
-      gsap.to(circularBtnRef.current, {
-        opacity: 0, scale: 0.8, duration: 0.8, onComplete: () => {
-          circularBtnRef.current!.style.display = 'none';
-          breathingRef.current!.style.display = 'flex';
-          gsap.fromTo(
-            breathingRef.current,
-            { opacity: 0, scale: 0.95, backdropFilter: 'blur(0px)', backgroundColor: 'rgba(0,0,0,0)' },
-            { opacity: 1, scale: 1, duration: 1, ease: "power2.out", backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.3)' }
-          );
-          startBreathingCycle();
-        }
-      });
-    }
+    secondBtnRef.current!.addEventListener('click', () => navigate('/forestVeda/Scene3'));
 
-    function startBreathingCycle() {
-      const BREATHING_DURATION = 36000;
-      const CYCLE_DURATION = 12000;
-      const cycleStart = Date.now();
-      let lastState: 'inhale'|'hold'|'exhale'|null = null;
-
-      gsap.set(progressRing, { strokeDashoffset: CIRCUMFERENCE });
-      gsap.to(progressRing, {
+    const breathingCycle = () => {
+      const TOTAL = 36000;
+      const CYCLE = 12000;
+      const start = Date.now();
+      let lastState: 'inhale' | 'hold' | 'exhale' | null = null;
+      gsap.set(ring, { strokeDashoffset: CIRCUMFERENCE });
+      gsap.to(ring, {
         strokeDashoffset: 0,
-        duration: BREATHING_DURATION/1000,
-        ease: "none",
+        duration: TOTAL / 1000,
+        ease: 'none',
         onUpdate: () => {
-          const elapsed = (Date.now() - cycleStart) % CYCLE_DURATION;
-          const state: 'inhale'|'hold'|'exhale' =
-            elapsed < 4000 ? 'inhale' : elapsed < 8000 ? 'hold' : 'exhale';
+          const elapsed = (Date.now() - start) % CYCLE;
+          const state = elapsed < 4000 ? 'inhale' : elapsed < 8000 ? 'hold' : 'exhale';
           if (state !== lastState) {
             lastState = state;
             gsap.to(instructionRef.current, {
-              opacity: 0, y: -15, duration: 0.3, onComplete: () => {
+              opacity: 0,
+              y: -15,
+              duration: 0.3,
+              onComplete: () => {
                 instructionRef.current!.textContent = state.toUpperCase();
                 gsap.to(instructionRef.current, { opacity: 1, y: 0, duration: 0.5 });
               }
@@ -171,102 +209,113 @@ const Scene2: React.FC = () => {
           }
         }
       });
-      setTimeout(() => stopBreathingExercise(), BREATHING_DURATION);
-    }
+      setTimeout(stopBreathing, TOTAL);
+    };
 
-    function stopBreathingExercise() {
-      gsap.killTweensOf(progressRing);
-      gsap.set(progressRing, { strokeDashoffset: 0 });
-      gsap.to(breathingRef.current, {
-        opacity: 0, scale: 0.95, duration: 0.8, backdropFilter: 'blur(0px)', backgroundColor: 'rgba(0,0,0,0)',
-        onComplete: () => { breathingRef.current!.style.display = 'none'; }
-      });
-    }
-
-    // Second button to go to Scene 3
-    secondBtnRef.current!.addEventListener('click', () => {
-      gsap.to([canvasRef.current, textCanvasRef.current, cursorCanvasRef.current], {
-        opacity: 0, duration: 0.5, onComplete: () => {
-          window.location.href = 'index_s3.html';
+    const beginBreathing = () => {
+      gsap.to(circularBtnRef.current, {
+        opacity: 0,
+        scale: 0.8,
+        duration: 0.8,
+        onComplete: () => {
+          circularBtnRef.current!.style.display = 'none';
+          breathingRef.current!.style.display = 'flex';
+          gsap.fromTo(
+            breathingRef.current,
+            { opacity: 0, scale: 0.95, backdropFilter: 'blur(0px)', backgroundColor: 'rgba(0,0,0,0)' },
+            { opacity: 1, scale: 1, duration: 1, backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.3)' }
+          );
+          breathingCycle();
         }
       });
-    });
+    };
 
-    // Animation loop + render
+    const stopBreathing = () => {
+      gsap.killTweensOf(ring);
+      gsap.set(ring, { strokeDashoffset: 0 });
+      gsap.to(breathingRef.current, {
+        opacity: 0,
+        scale: 0.95,
+        duration: 0.8,
+        backdropFilter: 'blur(0px)',
+        backgroundColor: 'rgba(0,0,0,0)',
+        onComplete: () => {
+          breathingRef.current!.style.display = 'none';
+        }
+      });
+    };
+
     const animate = () => {
-      const cursorCtx = cursorCanvasRef.current!.getContext('2d')!;
-      cursorCtx.clearRect(0, 0, cursorCanvasRef.current!.width, cursorCanvasRef.current!.height);
+      cursorCtx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
       updateParticles();
       requestAnimationFrame(animate);
     };
     animate();
 
     function render() {
-      const ctx = canvasRef.current!.getContext('2d')!;
-      ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-      ctx.drawImage(images[ballRef.current.frame], 0, 0);
-
-      // show/hide first circularBtn
-      const f = ballRef.current.frame;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(images[controller.frame], 0, 0);
+      const f = controller.frame;
       if (f >= 100 && f <= 130) {
         secondContainerRef.current!.style.display = 'none';
         circularBtnRef.current!.style.display = 'block';
         circularBtnRef.current!.style.opacity = '1';
       } else {
         circularBtnRef.current!.style.opacity = '0';
-        setTimeout(() => { if (f < 100 || f > 130) circularBtnRef.current!.style.display = 'none'; }, 300);
+        setTimeout(() => {
+          if (controller.frame < 100 || controller.frame > 130) circularBtnRef.current!.style.display = 'none';
+        }, 300);
       }
-      // show/hide second button
       if (f >= 170 && f <= 200) {
         secondContainerRef.current!.style.display = 'block';
         secondContainerRef.current!.style.opacity = '1';
       } else {
         secondContainerRef.current!.style.opacity = '0';
-        setTimeout(() => { if (f < 170 || f > 200) secondContainerRef.current!.style.display = 'none'; }, 300);
+        setTimeout(() => {
+          if (controller.frame < 170 || controller.frame > 200) secondContainerRef.current!.style.display = 'none';
+        }, 300);
       }
     }
 
     return () => {
       window.removeEventListener('resize', onResize);
-      ScrollTrigger.getAll().forEach(st => st.kill());
+      document.removeEventListener('mousemove', mouseMove);
+      document.removeEventListener('touchstart', touchStart);
+      document.removeEventListener('touchmove', touchMove);
+      ScrollTrigger.getAll().forEach(s => s.kill());
     };
-  }, [isMobile]);
+  }, [isMobile, navigate]);
 
   return (
     <>
       <div ref={loaderRef} className={styles.loader}>
         <video ref={forestLoopRef} className={styles['forest-loop-video']} autoPlay muted loop playsInline>
-          <source src="./ForestLoop.webm" type="video/webm" />
+          <source src={`${import.meta.env.BASE_URL}ForestLoop.webm`} type="video/webm" />
         </video>
         <h2>Forest Experience</h2>
-        <div ref={loadingBarRef} className={styles['loading-bar']}></div>
-        <div ref={progressRef} id="progress">0%</div>
+        <div ref={loadingBarRef} className={styles['loading-bar']} />
+        <div ref={progressRef}>0%</div>
       </div>
-
-      <canvas ref={canvasRef} className={styles.canvas}></canvas>
-      <canvas ref={textCanvasRef} className={styles['text-canvas']}></canvas>
-      <canvas ref={cursorCanvasRef} className={styles['cursor-canvas']}></canvas>
-
+      <canvas ref={canvasRef} className={styles.canvas} />
+      <canvas ref={textCanvasRef} className={styles['text-canvas']} />
+      <canvas ref={cursorCanvasRef} className={styles['cursor-canvas']} />
       <div className={styles['circular-button-container']}>
         <button ref={circularBtnRef} className={styles['circular-button']}>
           <span className={styles['button-text']}>HOLD TO BEGIN</span>
           <svg className="progress-ring" viewBox="0 0 180 180">
             <circle className={styles['progress-ring-circle-bg']} r="85" cx="90" cy="90" />
-            <circle className={styles['progress-ring-circle']} r="85" cx="90" cy="90" />
+            <circle className="progress-ring-circle" r="85" cx="90" cy="90" />
           </svg>
         </button>
       </div>
-
       <div ref={secondContainerRef} className={styles['circular-button-container']}>
         <button ref={secondBtnRef} className={styles['circular-button']}>
           <span className={styles['button-text']}>EVERY PRODUCT, A MOMENT OF CALM</span>
         </button>
       </div>
-
       <div ref={breathingRef} className={styles['breathing-container']}>
-        <img src="./Seaweda Flower.svg" className={styles['breathing-background-flower']} alt="" />
+        <img src={`${import.meta.env.BASE_URL}Seaweda Flower.svg`} className={styles['breathing-background-flower']} alt="" />
         <svg className={styles['meditation-progress-ring']} viewBox="0 0 180 180">
-          <defs>/* ...gradient defs... */</defs>
           <circle className={styles['meditation-progress-ring-bg']} r="85" cx="90" cy="90" />
           <circle className={styles['meditation-progress-ring-circle']} r="85" cx="90" cy="90" />
         </svg>
@@ -275,9 +324,9 @@ const Scene2: React.FC = () => {
           <div ref={instructionRef} className={styles['breathing-instruction']}>INHALE</div>
         </div>
         <div className={styles['breathing-rings']}>
-          <div className={styles.ring}></div>
-          <div className={styles['ring-2']}></div>
-          <div className={styles['ring-3']}></div>
+          <div className={styles.ring} />
+          <div className={styles['ring-2']} />
+          <div className={styles['ring-3']} />
         </div>
       </div>
     </>
@@ -285,7 +334,3 @@ const Scene2: React.FC = () => {
 };
 
 export default Scene2;
-
-function updateParticles() {
-    throw new Error('Function not implemented.');
-}
